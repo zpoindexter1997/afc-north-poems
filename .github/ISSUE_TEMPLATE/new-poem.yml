@@ -1,0 +1,65 @@
+name: New Poem
+description: Submit this week's AFC North recap poem — it auto-publishes to the site.
+title: "New poem"
+labels: ["new-poem"]
+body:
+  - type: input
+    id: week
+    attributes:
+      label: Week number
+      description: NFL week number (just the number)
+      placeholder: "5"
+    validations:
+      required: true
+  - type: input
+    id: season
+    attributes:
+      label: Season year
+      placeholder: "2026"
+    validations:
+      required: true
+  - type: input
+    id: date
+    attributes:
+      label: Date
+      description: Date this recap is being posted (YYYY-MM-DD)
+      placeholder: "2026-10-06"
+    validations:
+      required: true
+  - type: input
+    id: title
+    attributes:
+      label: Poem title
+      placeholder: "Ravens Fumble Their Way to Glory"
+    validations:
+      required: true
+  - type: input
+    id: matchup
+    attributes:
+      label: Matchup or score line (optional)
+      placeholder: "BAL 24 - CIN 17"
+    validations:
+      required: false
+  - type: dropdown
+    id: accentTeam
+    attributes:
+      label: Which team's colors should theme this week's page?
+      options:
+        - ravens
+        - bengals
+        - browns
+        - steelers
+        - mixed
+      default: 4
+    validations:
+      required: true
+  - type: textarea
+    id: poem
+    attributes:
+      label: The poem
+      description: Paste your poem here. Line breaks are preserved exactly as written.
+      placeholder: |
+        Roses are purple,
+        Violets are gold...
+    validations:
+      required: true
