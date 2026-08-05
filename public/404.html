@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>AFC North Recap</title>
+    <script>
+      // GitHub Pages SPA redirect trick (rafgraph/spa-github-pages).
+      // Lets direct links / refreshes to /poem/:slug work even though
+      // GitHub Pages only serves static files.
+      var pathSegmentsToKeep = 1;
+      var l = window.location;
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash
+      );
+    </script>
+  </head>
+  <body></body>
+</html>
