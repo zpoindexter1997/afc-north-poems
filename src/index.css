@@ -1,0 +1,176 @@
+:root {
+  color-scheme: light;
+  --ink: #1b1b1b;
+  --paper: #faf7f2;
+  --paper-card: #ffffff;
+  --muted: #6b6b6b;
+  --border: #e3ddd2;
+  font-family: 'Georgia', 'Iowan Old Style', 'Palatino Linotype', serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  background-image: radial-gradient(circle at 20% 0%, rgba(255, 182, 18, 0.08), transparent 40%),
+    radial-gradient(circle at 80% 10%, rgba(36, 23, 115, 0.06), transparent 45%);
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.container {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 20px 64px;
+  flex: 1;
+  width: 100%;
+}
+
+.site-header {
+  text-align: center;
+  padding: 48px 20px 24px;
+}
+
+.site-title {
+  font-size: 2rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.site-title-emoji {
+  display: inline-block;
+}
+
+.site-tagline {
+  color: var(--muted);
+  font-style: italic;
+  margin: 8px 0 0;
+}
+
+.section-label {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-family: system-ui, sans-serif;
+  margin: 32px 0 12px;
+}
+
+.poem-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.poem-card {
+  display: block;
+  background: var(--paper-card);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 22px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.poem-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.poem-card-featured {
+  padding: 28px 30px;
+}
+
+.poem-card-meta {
+  font-family: system-ui, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.poem-card-title {
+  margin: 0 0 4px;
+  font-size: 1.4rem;
+  line-height: 1.3;
+}
+
+.poem-card-featured .poem-card-title {
+  font-size: 1.8rem;
+}
+
+.poem-card-matchup {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-family: system-ui, sans-serif;
+  font-size: 0.9rem;
+}
+
+.poem-card-excerpt {
+  margin: 12px 0 0;
+  white-space: pre-line;
+  color: #3a3a3a;
+  line-height: 1.6;
+}
+
+.back-link {
+  display: inline-block;
+  margin: 32px 0 8px;
+  color: var(--muted);
+  text-decoration: none;
+  font-family: system-ui, sans-serif;
+  font-size: 0.9rem;
+}
+
+.back-link:hover {
+  color: var(--ink);
+}
+
+.poem-full {
+  background: var(--paper-card);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  padding: 36px 40px 44px;
+  margin-bottom: 40px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.poem-full-title {
+  margin: 0 0 6px;
+  font-size: 2.1rem;
+  line-height: 1.25;
+}
+
+.poem-body {
+  font-family: 'Georgia', 'Iowan Old Style', 'Palatino Linotype', serif;
+  font-size: 1.1rem;
+  line-height: 1.85;
+  white-space: pre-wrap;
+  margin: 24px 0 0;
+  color: var(--ink);
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--muted);
+  margin-top: 60px;
+  font-style: italic;
+}
+
+.site-footer {
+  text-align: center;
+  color: var(--muted);
+  font-family: system-ui, sans-serif;
+  font-size: 0.8rem;
+  padding: 24px;
+}
