@@ -34,6 +34,21 @@ export default function PoemPage() {
         <h1 className="poem-full-title">{poem.title}</h1>
         {poem.matchup && <p className="poem-card-matchup">{poem.matchup}</p>}
         <pre className="poem-body">{poem.body}</pre>
+        {poem.images.length > 0 && (
+          <section className="poem-gallery" aria-label="Images from this recap">
+            {poem.images.map((src, i) => (
+              <a
+                key={src}
+                href={src}
+                target="_blank"
+                rel="noreferrer"
+                className="poem-gallery-item"
+              >
+                <img src={src} alt={`${poem.title} — image ${i + 1}`} loading="lazy" />
+              </a>
+            ))}
+          </section>
+        )}
       </article>
     </main>
   )

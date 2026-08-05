@@ -9,4 +9,5 @@ export interface Poem {
   matchup: string
   accentTeam: Team
   body: string
+  images: string[]
 }
