@@ -1,0 +1,97 @@
+name: Add Poem from Issue
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  add-poem:
+    if: contains(github.event.issue.labels.*.name, 'new-poem')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse issue form
+        uses: stefanbuck/github-issue-parser@v3
+        id: issue-parser
+        with:
+          template-path: .github/ISSUE_TEMPLATE/new-poem.yml
+
+      - name: Build poem file
+        id: build
+        env:
+          JSON_STRING: ${{ steps.issue-parser.outputs.jsonString }}
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, re
+
+          data = json.loads(os.environ["JSON_STRING"])
+
+          def get(key, default=""):
+              val = data.get(key)
+              if isinstance(val, dict):
+                  val = val.get("text", default)
+              return (val or default).strip()
+
+          week = get("week", "0")
+          season = get("season", str(__import__("datetime").date.today().year))
+          date = get("date", "")
+          title = get("title", "Untitled")
+          matchup = get("matchup", "")
+          accent = get("accentTeam", "mixed").lower()
+          poem = get("poem", "")
+
+          week_num = re.sub(r"\D", "", week) or "0"
+          slug = f"{season}-week-{int(week_num):02d}"
+
+          def esc(s):
+              return s.replace('"', '\\"')
+
+          frontmatter = (
+              "---\n"
+              f'title: "{esc(title)}"\n'
+              f"week: {week_num}\n"
+              f"season: {season}\n"
+              f"date: {date}\n"
+              f'matchup: "{esc(matchup)}"\n'
+              f"accentTeam: {accent}\n"
+              "---\n\n"
+          )
+
+          os.makedirs("content/poems", exist_ok=True)
+          path = f"content/poems/{slug}.md"
+          with open(path, "w") as f:
+              f.write(frontmatter + poem.strip() + "\n")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as gh_out:
+              gh_out.write(f"slug={slug}\n")
+          PYEOF
+
+      - name: Commit and push
+        run: |
+          git config user.name "poem-bot"
+          git config user.email "actions@github.com"
+          git add content/poems
+          git commit -m "Add poem: ${{ steps.build.outputs.slug }}" || echo "Nothing to commit"
+          git push
+
+      - name: Close issue with confirmation
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: "Added! The site will rebuild in a minute or two. 🏈",
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: "closed",
+            });
