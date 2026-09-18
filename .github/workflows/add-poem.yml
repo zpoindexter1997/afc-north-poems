@@ -7,13 +7,35 @@ on:
 permissions:
   contents: write
   issues: write
+  actions: write
+
+concurrency:
+  group: poem-publishing
+  cancel-in-progress: false
 
 jobs:
   add-poem:
     if: contains(github.event.issue.labels.*.name, 'new-poem')
     runs-on: ubuntu-latest
     steps:
+      - name: Check publishing permission
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+              ...context.repo, username: context.actor,
+            });
+            if (!['admin', 'maintain', 'write'].includes(data.permission)) {
+              core.setFailed('Only repository collaborators with write access can publish poems.');
+            }
+
       - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
       - name: Parse issue form
         uses: stefanbuck/github-issue-parser@v3
@@ -21,88 +43,61 @@ jobs:
         with:
           template-path: .github/ISSUE_TEMPLATE/new-poem.yml
 
-      - name: Build poem file
+      - name: Build poem and download photos
         id: build
         env:
           JSON_STRING: ${{ steps.issue-parser.outputs.jsonString }}
-        run: |
-          python3 - <<'PYEOF'
-          import json, os, re
-
-          data = json.loads(os.environ["JSON_STRING"])
-
-          def get(key, default=""):
-              val = data.get(key)
-              if isinstance(val, dict):
-                  val = val.get("text", default)
-              return (val or default).strip()
-
-          week = get("week", "0")
-          season = get("season", str(__import__("datetime").date.today().year))
-          date = get("date", "")
-          title = get("title", "Untitled")
-          matchup = get("matchup", "")
-          accent = get("accentTeam", "mixed").lower()
-          poem = get("poem", "")
-
-          week_num = re.sub(r"\D", "", week) or "0"
-          slug = f"{season}-week-{int(week_num):02d}"
-
-          def esc(s):
-              return s.replace('"', '\\"')
-
-          frontmatter = (
-              "---\n"
-              f'title: "{esc(title)}"\n'
-              f"week: {week_num}\n"
-              f"season: {season}\n"
-              f"date: {date}\n"
-              f'matchup: "{esc(matchup)}"\n'
-              f"accentTeam: {accent}\n"
-              "---\n\n"
-          )
-
-          os.makedirs("content/poems", exist_ok=True)
-          path = f"content/poems/{slug}.md"
-          with open(path, "w") as f:
-              f.write(frontmatter + poem.strip() + "\n")
-
-          with open(os.environ["GITHUB_OUTPUT"], "a") as gh_out:
-              gh_out.write(f"slug={slug}\n")
-          PYEOF
+        run: node .github/scripts/build-poem.mjs
 
       - name: Commit and push
+        env:
+          POEM_SLUG: ${{ steps.build.outputs.slug }}
         run: |
           git config user.name "poem-bot"
           git config user.email "actions@github.com"
           git add content/poems
-          git commit -m "Add poem: ${{ steps.build.outputs.slug }}" || echo "Nothing to commit"
-          git push
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish poem and photos: $POEM_SLUG"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
 
       - name: Trigger site deploy
         uses: actions/github-script@v7
         with:
           script: |
             await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+              ...context.repo,
               workflow_id: 'deploy.yml',
               ref: 'main',
             });
-          
+
       - name: Close issue with confirmation
+        uses: actions/github-script@v7
+        env:
+          POEM_SLUG: ${{ steps.build.outputs.slug }}
+          PHOTO_COUNT: ${{ steps.build.outputs.photo_count }}
+        with:
+          script: |
+            const url = `https://${context.repo.owner}.github.io/${context.repo.repo}/poem/${process.env.POEM_SLUG}`;
+            const count = Number(process.env.PHOTO_COUNT);
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: `Saved your poem with ${count} issue-uploaded photo${count === 1 ? '' : 's'}! [Read the recap](${url}) once deployment finishes. Edit this issue's body to update the poem or change the photo links; comments do not change the site.`,
+            });
+            await github.rest.issues.update({
+              ...context.repo, issue_number: context.issue.number, state: 'closed',
+            });
+
+      - name: Explain photo or poem validation failure
+        if: failure() && steps.build.outcome == 'failure'
         uses: actions/github-script@v7
         with:
           script: |
+            const run = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+              ...context.repo,
               issue_number: context.issue.number,
-              body: "Added! The site will rebuild in a minute or two. 🏈",
-            });
-            await github.rest.issues.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              state: "closed",
+              body: `The poem was not published. Check the date, week, and completed GitHub photo uploads (PNG/JPG/GIF/WebP; 10 photos max, 10 MB each, 50 MB total). [See the exact error](${run}), then edit this issue's body to retry. Previously published files were not changed.`,
             });

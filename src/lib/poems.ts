@@ -18,9 +18,9 @@ function parseFrontmatter(raw: string): { data: Record<string, string>; content:
     if (idx === -1) return
     const key = line.slice(0, idx).trim()
     let value = line.slice(idx + 1).trim()
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1)
-    }
+    if (value.startsWith('"') && value.endsWith('"')) {
+      try { value = JSON.parse(value) } catch { value = value.slice(1, -1) }
+    } else if (value.startsWith("'") && value.endsWith("'")) value = value.slice(1, -1)
     data[key] = value
   })
   return { data, content: body.trim() }
@@ -32,7 +32,7 @@ const modules = import.meta.glob('/content/poems/*.md', {
   import: 'default',
 }) as Record<string, string>
 
-// Images pulled from the original Word docs live in
+// Images uploaded through poem issues or pulled from the original Word docs live in
 // /content/poems/media/<slug>/, numbered in document order (01, 02, ...).
 // Vite resolves each to a hashed asset URL with the correct base path.
 const mediaModules = import.meta.glob('/content/poems/media/*/*.{png,jpeg,jpg,gif,webp}', {
