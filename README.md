@@ -51,7 +51,10 @@ publishes automatically to GitHub Pages whenever you add a new poem.
    team's colors to theme the page with, and paste in your poem.
 3. In **Postgame reel photos (optional)**, drag in photos, paste screenshots, or
    use GitHub's attachment picker. Wait for uploads to finish and leave the
-   generated links intact. List them in the order you want them displayed.
+   generated links intact. Photos pasted into **The poem** field work too:
+   the importer moves their image markup into the reel automatically. Inline
+   attachments appear first, followed by the dedicated photos field, with
+   duplicates removed. List them in the order you want them displayed.
    PNG, JPG, GIF, and WebP are supported: up to 10 photos, 10 MB each, 50 MB total.
 4. Submit the issue. Publishing requires repository write access.
 
@@ -62,8 +65,9 @@ give it a minute or two, then your link is updated. Photos are saved in
 
 To change a published poem or its photos, **edit the original issue body**, even
 after it has been closed. Rearrange image links to reorder the reel; delete links
-to remove those uploads. An empty photos field removes issue-uploaded photos for
-that poem. Existing photos imported from Word documents are preserved. Issue
+to remove those uploads. Remove an attachment from both the poem and photos
+fields to remove it; clearing all attachments removes all issue-uploaded photos
+for that poem. Existing photos imported from Word documents are preserved. Issue
 comments do not update the site. Use the same season/week when updating a poem;
 changing those fields creates a different poem rather than renaming the old one.
 

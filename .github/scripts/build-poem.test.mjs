@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { copyFile, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { attachmentUrl, buildPoem, downloadPhoto, imageExtension, photoUrls } from './build-poem.mjs'
+import { attachmentUrl, buildPoem, downloadPhoto, extractPoemPhotos, imageExtension, photoUrls } from './build-poem.mjs'
 
 const first = 'https://github.com/user-attachments/assets/11111111-1111-1111-1111-111111111111'
 const second = 'https://github.com/user-attachments/assets/22222222-2222-2222-2222-222222222222'
@@ -105,6 +105,51 @@ test('accepts issue parser text wrappers and dropdown arrays', async t => {
   const wrapped = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, { text: value }]))
   wrapped.accentTeam = ['steelers']
   assert.equal((await buildPoem(wrapped, root)).slug, '2026-week-05')
+})
+
+test('GitHub HTML uploads inside poem text become local reel photos, not literal text', async t => {
+  const root = await workspace(t)
+  const verse = 'Opening line\nAnother line\n\nClosing stanza.'
+  const submission = { ...data, poem: `${verse}\n\n<img width="1440" height="1625" alt="Image" src="${first}" />\n<img src='${second}' />`, photos: '_No response_' }
+  const result = await buildPoem(submission, root, okFetch)
+  assert.equal(result.photoCount, 2)
+  const written = await readFile(join(root, 'content/poems/2026-week-05.md'), 'utf8')
+  assert.ok(written.endsWith(verse + '\n'))
+  assert.ok(!written.includes('<img'))
+  assert.ok(!written.includes('user-attachments'))
+  assert.deepEqual((await readdir(join(root, 'content/poems/media/2026-week-05'))).sort(), ['issue-photo-01.gif', 'issue-photo-02.gif'])
+})
+
+test('handles inline Markdown, multiline HTML, and standalone attachment URLs without losing verse', () => {
+  const source = `First line\n\n![Photo](${first} "Game photo")\nMiddle line\n<img\n alt="Image"\n src="${second}" />\n${first}\nLast line`
+  const parsed = extractPoemPhotos(source)
+  assert.deepEqual(parsed.urls, [first, second, first])
+  assert.ok(parsed.body.includes('First line\n\n'))
+  assert.ok(parsed.body.includes('Middle line'))
+  assert.ok(parsed.body.endsWith('Last line'))
+  assert.ok(!parsed.body.includes('https://'))
+  assert.equal(extractPoemPhotos('See [the schedule](https://example.com).').body, 'See [the schedule](https://example.com).')
+  assert.throws(() => extractPoemPhotos('<img src="https://example.com/image.png" />'))
+})
+
+test('merges both attachment fields in order and deduplicates', async t => {
+  const root = await workspace(t)
+  const calls = []
+  const result = await buildPoem({ ...data, poem: `${data.poem}\n![Photo](${second})`, photos: `${first}\n${second}` }, root, async url => {
+    calls.push(url)
+    return new Response(gif)
+  })
+  assert.equal(result.photoCount, 2)
+  assert.deepEqual(calls, [second, first])
+})
+
+test('accepts GitHub actual S3 upload redirect without accepting arbitrary S3 buckets', async () => {
+  let calls = 0
+  const photo = await downloadPhoto(first, async () => ++calls === 1
+    ? new Response(null, { status: 302, headers: { location: 'https://github-production-user-asset-6210df.s3.amazonaws.com/123/photo.jpeg?signature=test' } })
+    : new Response(gif))
+  assert.equal(photo.extension, 'gif')
+  assert.throws(() => attachmentUrl('https://untrusted.s3.amazonaws.com/image.png', true))
 })
 
 test('enforces the combined size limit before writing', async t => {

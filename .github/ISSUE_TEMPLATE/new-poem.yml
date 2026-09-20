@@ -58,7 +58,7 @@ body:
     id: poem
     attributes:
       label: The poem
-      description: Paste your poem here. Line breaks are preserved exactly as written.
+      description: Paste your poem here. Line breaks are preserved. Photos pasted or dragged here are automatically moved into the postgame reel below the poem; you can also use the dedicated photos field.
       placeholder: |
         Roses are purple,
         Violets are gold...
@@ -72,7 +72,8 @@ body:
         Drag photos here, paste screenshots, or click the attachment button below this field.
         Wait for uploads to finish before submitting. Leave GitHub's generated image links intact.
         Photos appear in the order listed here, below the poem. PNG, JPG, GIF, or WebP; up to 10 photos, 10 MB each, 50 MB total.
-        To update photos later, edit this issue's body (not a comment). Remove links to remove those photos; leave this field empty for no issue-uploaded photos.
+        Photos attached inside the poem appear first, followed by this field. Duplicate attachments appear only once. Limits apply across both fields.
+        To update photos later, edit this issue's body (not a comment). Remove an attachment from both fields to remove it from the reel.
       placeholder: Drop your game photos or memes here — no filenames or code needed.
     validations:
       required: false

@@ -21,7 +21,7 @@ export function attachmentUrl(value, redirect = false) {
   const host = url.hostname.toLowerCase()
   const githubAsset = host === 'github.com' && /^\/user-attachments\/assets\/[a-f0-9-]+$/i.test(url.pathname)
   const imageHost = host === 'user-images.githubusercontent.com' || host === 'private-user-images.githubusercontent.com'
-  const assetRedirect = redirect && host.endsWith('.githubusercontent.com')
+  const assetRedirect = redirect && (host.endsWith('.githubusercontent.com') || host === 'github-production-user-asset-6210df.s3.amazonaws.com')
   if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443') || !(githubAsset || imageHost || assetRedirect)) {
     throw new Error('Photos must be uploaded to this GitHub issue. Use its attachment picker instead of external image links.')
   }
@@ -36,6 +36,25 @@ export function photoUrls(text) {
   const urls = [...new Set(matches.map(value => attachmentUrl(value.replaceAll('&amp;', '&'))))]
   if (urls.length > MAX_PHOTOS) throw new Error('Please attach no more than 10 photos.')
   return urls
+}
+
+// GitHub's upload UI is available in both textareas. Treat embedded images as
+// reel attachments rather than passing their HTML/Markdown into the plain verse.
+export function extractPoemPhotos(text) {
+  const urls = []
+  const take = value => {
+    urls.push(attachmentUrl(value.replaceAll('&amp;', '&')))
+    return ''
+  }
+  const body = text.replace(/<img\b[^>]*>|!\[[^\]]*\]\(\s*<?https?:\/\/[^\s)>]+>?(?:\s+["'][^"']*["'])?\s*\)/gi, markup => {
+    const html = /^<img\b/i.test(markup)
+    const url = html
+      ? markup.match(/\bsrc\s*=\s*["']([^"']+)["']/i)?.[1]
+      : markup.match(/\]\(\s*<?(https?:\/\/[^\s)>]+)/i)?.[1]
+    if (!url) throw new Error('An image in the poem has an invalid attachment link. Please reattach it using GitHub.')
+    return take(url)
+  }).replace(/^[ \t]*<?(https:\/\/(?:github\.com\/user-attachments\/assets\/|(?:private-)?user-images\.githubusercontent\.com\/)[^\s<>]+)>?[ \t]*$/gm, (_, url) => take(url))
+  return { body: body.trim(), urls }
 }
 
 export function imageExtension(bytes) {
@@ -86,7 +105,7 @@ export async function buildPoem(data, root = process.cwd(), fetcher = fetch) {
   const title = field(data, 'title')
   const matchup = field(data, 'matchup')
   const accent = field(data, 'accentTeam', 'mixed').toLowerCase()
-  const poem = field(data, 'poem')
+  const { body: poem, urls: inlinePhotos } = extractPoemPhotos(field(data, 'poem'))
   if (!/^\d{1,2}$/.test(week) || Number(week) < 1 || Number(week) > 30) throw new Error('Week must be a number from 1 to 30.')
   if (!/^\d{4}$/.test(season)) throw new Error('Season must be a four-digit year.')
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) throw new Error('Date must be a real date in YYYY-MM-DD format.')
@@ -96,8 +115,10 @@ export async function buildPoem(data, root = process.cwd(), fetcher = fetch) {
   const slug = `${season}-week-${String(Number(week)).padStart(2, '0')}`
   const photos = []
   let total = 0
+  const urls = [...new Set([...inlinePhotos, ...photoUrls(field(data, 'photos'))])]
+  if (urls.length > MAX_PHOTOS) throw new Error('Please attach no more than 10 photos across the poem and photos fields.')
   // Finish all downloads before touching an existing poem or its photos.
-  for (const url of photoUrls(field(data, 'photos'))) {
+  for (const url of urls) {
     const photo = await downloadPhoto(url, fetcher)
     total += photo.bytes.length
     if (total > MAX_TOTAL_BYTES) throw new Error('Combined photos must be 50 MB or smaller.')
